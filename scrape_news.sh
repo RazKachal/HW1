@@ -1,28 +1,46 @@
 #!/bin/bash
-# creats tmp file to store site data and links data
-touch data.txt 
-touch link.txt
-tfile="data.txt"
-# reads data from site and saves all article links in article.txt without douplicates
-wget -q -O $tfile https://www.ynetnews.com/category/3082
-grep -o "https://www\.ynetnews\.com/article/[a-zA-Z0-9]*" $tfile | sort | uniq > article.txt
-# counts how many articles we've got
-count=$(wc -l < article.txt)
-echo "$count"
-file="article.txt"
-tfile="link.txt"
-# searches for leaders names in each article link and echos the number of occurance out
+
+# Step 1: Get article links from Ynetnews
+article_links=$(wget -q -O - https://www.ynetnews.com/category/3082 | \
+  grep -oP 'https://www\.ynetnews\.com/article/[a-zA-Z0-9]+' | \
+  sort -u)
+
+# Step 2: Print number of articles
+article_count=$(echo "$article_links" | wc -l)
+echo "$article_count"
+
+# Step 3: Names to search for (case preserved for output)
+names=("Netanyahu" "Gantz" "Bennett" "Peretz")
+
+# Step 4: Process each article
 while IFS= read -r link; do
-    wget -q -O $tfile $link
-    bib=$(grep -ow "Netanyahu" $tfile | wc -l)
-    naf=$(grep -ow "Bennet" $tfile | wc -l)
-    gan=$(grep -ow "Gantz" $tfile | wc -l)
-    per=$(grep -ow "Peretz" $tfile | wc -l)
-    if [[ $bib -eq 0 && $naf -eq 0 && $gan -eq 0 && $per -eq 0 ]]; then 
-        echo "$link, -"
-    else 
-        echo "$link, Netanyahu, $bib, Bennet, $naf, Gantz, $gan, Peretz, $per"
+  # Download article content
+  content=$(wget -q -O - "$link")
+
+  # Track counts
+  declare -A counts
+  total_found=0
+
+  for name in "${names[@]}"; do
+    count=$(echo "$content" | grep -o "$name" | wc -l)
+    counts["$name"]=$count
+    if [ "$count" -gt 0 ]; then
+      total_found=$((total_found + 1))
     fi
-done < "$file"
+  done
 
+  # Format output
+  if [ "$total_found" -eq 0 ]; then
+    echo "$link, -"
+  else
+    output="$link"
+    for name in "${names[@]}"; do
+      output+=", $name, ${counts[$name]}"
+    done
+    echo "$output"
+  fi
 
+  # Unset associative array for next loop
+  unset counts
+
+done <<< "$article_links"
