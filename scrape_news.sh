@@ -6,8 +6,8 @@ article_links=$(wget -q -O - https://www.ynetnews.com/category/3082 | \
   sort -u)
 
 # Step 2: Print number of articles
-article_count=$(echo "$article_links" | wc -l)
-echo "$article_count"
+# article_count=$(echo "$article_links" | wc -l) 
+# echo "$article_count" 
 
 # Step 3: Names to search for (case preserved for output)
 names=("Netanyahu" "Gantz" "Bennett" "Peretz")
